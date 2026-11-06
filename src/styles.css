@@ -451,3 +451,30 @@ kbd {
     bottom: 170px;
   }
 }
+
+.scene-status {
+  position: absolute;
+  left: 50%;
+  bottom: 32px;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: rgba(20, 18, 15, 0.72);
+  color: #fff;
+  font-size: 14px;
+  text-align: center;
+}
+
+.scene-status.error-status {
+  background: #fff1f0;
+  color: #8a1c17;
+}
+
+.scene code,
+.scene-status code {
+  padding: 0 4px;
+  border-radius: 4px;
+  background: rgba(127, 127, 127, 0.25);
+  font-size: 0.95em;
+}

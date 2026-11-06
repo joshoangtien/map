@@ -4,7 +4,10 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "postinstall": "node scripts/copy-draco.mjs",
+    "predev": "node scripts/copy-draco.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/copy-draco.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b",

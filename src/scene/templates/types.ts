@@ -21,4 +21,6 @@ export interface TemplateResult {
   interior?: XZ[];
   /** Các bục/nền cao hơn mặt đất: nhân vật đứng lên đúng cao độ khi đi vào. */
   floors?: { ring: XZ[]; y: number }[];
+  /** false nếu model tự dựng chưa có khối va chạm riêng. */
+  hasColliders?: boolean;
 }

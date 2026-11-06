@@ -23,10 +23,12 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [place, setPlace] = useState<LocationInfo | null>(null);
 
+  const exitPlace = useCallback(() => setPlace(null), []);
+
   const enterPlace = () => {
     if (!map || !poi) return;
     const site = extractSite(map, poi.lngLat);
-    setPlace({ id: poi.id, name: poi.name, kind: poi.kind, category: poi.category, site });
+    setPlace({ id: poi.id, name: poi.name, kind: poi.kind, category: poi.category, lngLat: poi.lngLat, site });
   };
 
   const flyTo = useCallback(
@@ -120,7 +122,7 @@ export default function App() {
 
       {place && (
         <Suspense fallback={<div className="scene-loading">Đang dựng địa điểm…</div>}>
-          <LocationScene place={place} playerName={PLAYER_NAME} onExit={() => setPlace(null)} />
+          <LocationScene place={place} playerName={PLAYER_NAME} onExit={exitPlace} />
         </Suspense>
       )}
     </div>

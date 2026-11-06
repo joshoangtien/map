@@ -1,15 +1,23 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
 import type { SiteData } from './geo';
-import { SceneRuntime } from './runtime';
+import { SceneRuntime, type RuntimeState } from './runtime';
 import { pickTemplate } from './templates';
+import { findModel, loadModel, loadRegistry, type ModelEntry } from './models';
 
 export interface LocationInfo {
   id: string;
   name: string;
   kind: string;
   category: string;
+  lngLat: [number, number];
   site: SiteData;
 }
+
+type Source =
+  | { type: 'loading' }
+  | { type: 'template' }
+  | { type: 'model'; entry: ModelEntry; hasColliders: boolean }
+  | { type: 'error'; entry: ModelEntry; message: string };
 
 interface Props {
   place: LocationInfo;
@@ -34,36 +42,81 @@ export default function LocationScene({ place, playerName, onExit }: Props) {
   const runtime = useRef<SceneRuntime | null>(null);
   const [inside, setInside] = useState(false);
   const [help, setHelp] = useState(true);
+  const [source, setSource] = useState<Source>({ type: 'loading' });
+  // Tăng lên mỗi khi file model thay đổi (xuất lại từ Blender) để dựng lại scene.
+  const [version, setVersion] = useState(0);
+  // Giữ vị trí nhân vật và camera khi dựng lại scene.
+  const keep = useRef<RuntimeState | null>(null);
   const template = pickTemplate(place.kind, place.category === 'place_of_worship');
 
   useEffect(() => {
     if (!container.current) return;
-    const rt = new SceneRuntime({
-      container: container.current,
-      site: place.site,
-      placeName: place.name,
-      placeKind: place.kind,
-      template,
-      playerName,
-      seed: hash(place.id),
-    });
-    runtime.current = rt;
-    if (import.meta.env.DEV) (window as unknown as { __scene: SceneRuntime }).__scene = rt;
-    const timer = setInterval(() => setInside(rt.isInside()), 300);
+    const el = container.current;
+    let cancelled = false;
+    let rt: SceneRuntime | null = null;
+    let timer = 0;
+
+    (async () => {
+      const entry = findModel(await loadRegistry(), place.name, place.lngLat);
+      let model: Awaited<ReturnType<typeof loadModel>> | null = null;
+      let next: Source = { type: 'template' };
+      if (entry) {
+        try {
+          model = await loadModel(entry);
+        } catch (e) {
+          next = { type: 'error', entry, message: e instanceof Error ? e.message : String(e) };
+        }
+      }
+      if (cancelled) return;
+      rt = new SceneRuntime({
+        container: el,
+        site: place.site,
+        placeName: place.name,
+        placeKind: place.kind,
+        template,
+        playerName,
+        seed: hash(place.id),
+        model: model && entry ? { group: model, entry, poiLngLat: place.lngLat } : undefined,
+      });
+      if (model && entry) next = { type: 'model', entry, hasColliders: rt.template.hasColliders !== false };
+      if (keep.current) rt.setState(keep.current);
+      setSource(next);
+      runtime.current = rt;
+      if (import.meta.env.DEV) (window as unknown as { __scene: SceneRuntime }).__scene = rt;
+      const r = rt;
+      timer = window.setInterval(() => setInside(r.isInside()), 300);
+    })();
+
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+      if (rt) {
+        keep.current = rt.getState();
+        rt.dispose();
+      }
+      runtime.current = null;
+    };
+    // Chỉ dựng lại scene khi đổi địa điểm hoặc model thay đổi.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [place.id, version]);
+
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.code === 'Escape') onExit();
       if (e.code === 'KeyH') setHelp((v) => !v);
     };
     window.addEventListener('keydown', onKey);
-    return () => {
-      clearInterval(timer);
-      window.removeEventListener('keydown', onKey);
-      rt.dispose();
-      runtime.current = null;
-    };
-    // Chỉ dựng lại scene khi đổi địa điểm.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [place.id]);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onExit]);
+
+  // Khi chạy `npm run dev`: xuất lại model từ Blender thì scene tự cập nhật.
+  useEffect(() => {
+    const hot = import.meta.hot;
+    if (!hot) return;
+    const onChange = () => setVersion((v) => v + 1);
+    hot.on('vnmap:models-changed', onChange);
+    return () => hot.off('vnmap:models-changed', onChange);
+  }, []);
 
   return (
     <div className="scene">
@@ -77,6 +130,7 @@ export default function LocationScene({ place, playerName, onExit }: Props) {
           <strong>{place.name}</strong>
           <span>
             {place.kind} · {inside ? 'Bên trong' : 'Bên ngoài'}
+            {source.type === 'model' && ' · Model tự dựng'}
           </span>
         </div>
       </header>
@@ -98,10 +152,28 @@ export default function LocationScene({ place, playerName, onExit }: Props) {
             </li>
           </ul>
           <small>
-            {TEMPLATE_LABEL[template]}
-            {place.site.target ? ', kích thước và hướng theo mặt bằng thật.' : ' (chưa có mặt bằng thật, dùng kích thước mặc định).'} Nhà, đường, cây xung quanh lấy từ
-            dữ liệu bản đồ.
+            {source.type === 'model' ? (
+              <>
+                Model tự dựng: <code>{source.entry.file ?? `${source.entry.id}.glb`}</code>.
+                {!source.hasColliders && ' Model chưa có khối "collider…" nên chưa vào trong được.'}
+              </>
+            ) : (
+              <>
+                {TEMPLATE_LABEL[template]}
+                {place.site.target ? ', kích thước và hướng theo mặt bằng thật.' : ' (chưa có mặt bằng thật, dùng kích thước mặc định).'}
+              </>
+            )}{' '}
+            Nhà, đường, cây xung quanh lấy từ dữ liệu bản đồ.
           </small>
+        </div>
+      )}
+
+      {source.type === 'loading' && <div className="scene-status">Đang dựng địa điểm…</div>}
+      {source.type === 'error' && (
+        <div className="scene-status error-status">
+          Không tải được model <code>{source.entry.file ?? `${source.entry.id}.glb`}</code>, đang dùng mẫu có sẵn.
+          <br />
+          <small>{source.message}</small>
         </div>
       )}
 

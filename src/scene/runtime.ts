@@ -9,6 +9,8 @@ import { CollisionWorld } from './collision';
 import { buildEnvironment } from './environment';
 import { pointInRing, type SiteData, type XZ } from './geo';
 import { buildTemplate, type TemplateId, type TemplateResult } from './templates';
+import { buildFromModel } from './templates/model';
+import type { ModelEntry } from './models';
 
 export interface SceneOptions {
   container: HTMLElement;
@@ -18,6 +20,16 @@ export interface SceneOptions {
   template: TemplateId;
   playerName: string;
   seed: number;
+  /** Model tự dựng (Blender) thay cho mẫu có sẵn. */
+  model?: { group: THREE.Group; entry: ModelEntry; poiLngLat: [number, number] };
+}
+
+export interface RuntimeState {
+  pos: XZ;
+  facing: number;
+  yaw: number;
+  pitch: number;
+  distance: number;
 }
 
 const WALK = 3.2;
@@ -101,14 +113,15 @@ export class SceneRuntime {
     this.scene.add(this.sun, this.sun.target);
 
     // --- Công trình chính + môi trường ---
-    this.template = buildTemplate(opts.template, {
+    const tInput = {
       name: opts.placeName,
       kind: opts.placeKind,
       site,
       collisions: this.collisions,
       occluders: this.occluders,
       seed: opts.seed,
-    });
+    };
+    this.template = opts.model ? buildFromModel({ ...tInput, model: opts.model.group, entry: opts.model.entry, poiLngLat: opts.model.poiLngLat }) : buildTemplate(opts.template, tInput);
     this.scene.add(this.template.group);
     this.scene.add(
       buildEnvironment({ site, collisions: this.collisions, occluders: this.occluders, footprint: this.template.footprint, seed: opts.seed }),
@@ -356,6 +369,20 @@ export class SceneRuntime {
     this.camDist += (d - this.camDist) * (dt >= 1 ? 1 : k);
     this.camera.position.copy(head).addScaledVector(dir, this.camDist);
     this.camera.lookAt(head);
+  }
+
+  getState(): RuntimeState {
+    return { pos: this.pos, facing: this.facing, yaw: this.yaw, pitch: this.pitch, distance: this.distance };
+  }
+
+  /** Khôi phục vị trí nhân vật / camera (vd. sau khi nạp lại model). */
+  setState(s: RuntimeState) {
+    this.pos = this.collisions.blocked(s.pos, RADIUS) ? this.findFreeSpot(s.pos) : s.pos;
+    this.facing = s.facing;
+    this.yaw = s.yaw;
+    this.pitch = s.pitch;
+    this.distance = this.camDist = s.distance;
+    this.syncPlayer(0);
   }
 
   /** Nhân vật đang ở trong công trình chính không. */

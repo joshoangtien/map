@@ -41,6 +41,12 @@ Mã nguồn nằm trong `src/scene/`:
 | `runtime.ts` | Vòng chạy three.js: ánh sáng, bầu trời, camera, điều khiển |
 | `LocationScene.tsx` | Giao diện scene (React) và cần điều khiển cảm ứng |
 
+## Tự dựng địa điểm bằng Blender
+
+Có thể thay mẫu có sẵn bằng model tự dựng cho từng địa điểm: dựng trong Blender, bấm **Xuất sang game**, file `.glb` được lưu vào `public/models/` và đăng ký trong `public/models/index.json`. Khi chạy `npm run dev`, game tự nạp lại mỗi lần xuất.
+
+Hướng dẫn chi tiết, quy ước đặt tên (`collider…`, `floor…`, `spawn`) và nhà nguyện mẫu: xem [`blender/README.md`](blender/README.md).
+
 ## Chạy
 
 ```bash
