@@ -10,6 +10,8 @@ export interface SelectedPoi {
   id: string;
   name: string;
   kind: string;
+  /** Giá trị `class` gốc của OpenMapTiles (vd. place_of_worship). */
+  category: string;
   groupLabel?: string;
   color: string;
   lngLat: [number, number];
@@ -33,6 +35,7 @@ function toSelected(f: MapGeoJSONFeature): SelectedPoi | null {
     id: String(f.id ?? `${p.class}-${lng.toFixed(6)}-${lat.toFixed(6)}`),
     name,
     kind,
+    category: p.class ?? '',
     groupLabel: group?.label,
     color: group?.color ?? '#7f8c8d',
     lngLat: [lng, lat],

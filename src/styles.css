@@ -302,3 +302,152 @@ button:disabled {
   font-size: 20px;
   line-height: 1;
 }
+
+/* ================= Scene địa điểm ================= */
+.app.in-scene > :not(.scene):not(.scene-loading) {
+  visibility: hidden;
+}
+
+.scene,
+.scene-loading {
+  position: absolute;
+  inset: 0;
+  background: #cfe0ea;
+}
+
+.scene-loading {
+  display: grid;
+  place-items: center;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.scene-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.scene-canvas canvas {
+  display: block;
+  outline: none;
+}
+
+.scene-top {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.scene-top > * {
+  pointer-events: auto;
+}
+
+.back {
+  padding: 9px 14px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--red);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: var(--shadow);
+}
+
+.scene-title {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 14px;
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  line-height: 1.25;
+}
+
+.scene-title span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.scene-help {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  width: min(330px, calc(100% - 24px));
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(20, 18, 15, 0.72);
+  color: #fff;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+
+.scene-help ul {
+  margin: 6px 0 8px;
+  padding-left: 18px;
+}
+
+.scene-help li {
+  margin: 3px 0;
+}
+
+.scene-help small {
+  display: block;
+  opacity: 0.75;
+}
+
+kbd {
+  display: inline-block;
+  min-width: 20px;
+  margin: 0 1px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  font: 600 12px/18px system-ui, sans-serif;
+  text-align: center;
+}
+
+.joystick {
+  display: none;
+  position: absolute;
+  left: 28px;
+  bottom: 28px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  touch-action: none;
+}
+
+.knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 52px;
+  height: 52px;
+  margin: -26px 0 0 -26px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: var(--shadow);
+}
+
+@media (pointer: coarse) {
+  .joystick {
+    display: block;
+  }
+}
+
+@media (max-width: 640px) {
+  .scene-top {
+    right: 12px;
+  }
+
+  .scene-help {
+    top: auto;
+    bottom: 170px;
+  }
+}

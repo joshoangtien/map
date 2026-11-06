@@ -3,9 +3,10 @@ import type { SelectedPoi } from './MapView';
 interface Props {
   poi: SelectedPoi;
   onClose: () => void;
+  onEnter: () => void;
 }
 
-export function PoiPanel({ poi, onClose }: Props) {
+export function PoiPanel({ poi, onClose, onEnter }: Props) {
   const [lng, lat] = poi.lngLat;
   return (
     <aside className="poi-panel" role="dialog" aria-label={poi.name}>
@@ -20,9 +21,9 @@ export function PoiPanel({ poi, onClose }: Props) {
       <p className="poi-coord">
         {lat.toFixed(5)}° B, {lng.toFixed(5)}° Đ
       </p>
-      <button className="poi-enter" disabled title="Sẽ có ở bản MVP 2">
+      <button className="poi-enter" onClick={onEnter}>
         Vào địa điểm
-        <small>Sắp có</small>
+        <small>→</small>
       </button>
     </aside>
   );

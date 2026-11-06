@@ -1,9 +1,15 @@
-import { useCallback, useState } from 'react';
+import { lazy, Suspense, useCallback, useState } from 'react';
 import type { Map as MapLibreMap } from 'maplibre-gl';
 import { MapView, type SelectedPoi } from './components/MapView';
 import { PoiPanel } from './components/PoiPanel';
 import { QUICK_PLACES, VIETNAM_BOUNDS, type QuickPlace } from './map/places';
 import { POI_GROUPS } from './map/poi';
+import { extractSite } from './scene/extract';
+import type { LocationInfo } from './scene/LocationScene';
+
+// Phần scene 3D (three.js) được tải riêng khi vào địa điểm lần đầu.
+const LocationScene = lazy(() => import('./scene/LocationScene'));
+const PLAYER_NAME = 'Khách';
 
 const POI_MIN_ZOOM = 14;
 
@@ -15,6 +21,13 @@ export default function App() {
   const [globe, setGlobe] = useState(true);
   const [showLegend, setShowLegend] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [place, setPlace] = useState<LocationInfo | null>(null);
+
+  const enterPlace = () => {
+    if (!map || !poi) return;
+    const site = extractSite(map, poi.lngLat);
+    setPlace({ id: poi.id, name: poi.name, kind: poi.kind, category: poi.category, site });
+  };
 
   const flyTo = useCallback(
     (p: QuickPlace) => {
@@ -41,7 +54,7 @@ export default function App() {
   };
 
   return (
-    <div className="app">
+    <div className={place ? 'app in-scene' : 'app'}>
       <MapView selected={poi} onReady={setMap} onSelect={setPoi} onZoom={setZoom} onError={setError} />
 
       <header className="topbar">
@@ -103,7 +116,13 @@ export default function App() {
         </div>
       )}
 
-      {poi && <PoiPanel poi={poi} onClose={() => setPoi(null)} />}
+      {poi && <PoiPanel poi={poi} onClose={() => setPoi(null)} onEnter={enterPlace} />}
+
+      {place && (
+        <Suspense fallback={<div className="scene-loading">Đang dựng địa điểm…</div>}>
+          <LocationScene place={place} playerName={PLAYER_NAME} onExit={() => setPlace(null)} />
+        </Suspense>
+      )}
     </div>
   );
 }
